@@ -22,6 +22,7 @@ Any parameters go here:
 - `n_samples`: number of samples
 
 ```{r}
+set.seed(42)
 k_folds = 5
 n_samples = 10000
 ```
