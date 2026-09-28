@@ -11,7 +11,7 @@ editor: source
 
 
 ```{r message=FALSE, warning=FALSE}
-library(randomForest)
+library(ranger)
 library(caret)
 library(sjPlot)
 ```
@@ -53,12 +53,12 @@ for (k in 1:k_folds) {
   df_test = df[folds[[k]], ]
 
   ## Propensity model
-  mod_t <- randomForest(t ~ ., data = df_train[, c("t", colnames(X))])
-  df$t_hat[folds[[k]]] = predict(mod_t, newdata = df_test[, colnames(X)])
+  mod_t <- ranger(t ~ ., data = df_train[, c("t", colnames(X))])
+  df$t_hat[folds[[k]]] = predict(mod_t, data = df_test[, colnames(X)])$predictions
 
   ## Outcome model
-  mod_y <- randomForest(y ~ ., data = df_train[, c("y", colnames(X))])
-  df$y_hat[folds[[k]]] = predict(mod_y, newdata = df_test[, colnames(X)])
+  mod_y <- ranger(y ~ ., data = df_train[, c("y", colnames(X))])
+  df$y_hat[folds[[k]]] = predict(mod_y, data = df_test[, colnames(X)])$predictions
 
 }
 

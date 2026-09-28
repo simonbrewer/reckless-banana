@@ -2236,7 +2236,7 @@ vertical-align: -.125em;
 <section id="data" class="level2">
 <h2 class="anchored" data-anchor-id="data">Data</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(randomForest)</span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ranger)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sjPlot)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -2292,33 +2292,22 @@ vertical-align: -.125em;
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  df_test <span class="ot">=</span> df[folds[[k]], ]</span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="do">## Propensity model</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  mod_t <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(t <span class="sc">~</span> ., <span class="at">data =</span> df_train[, <span class="fu">c</span>(<span class="st">&quot;t&quot;</span>, <span class="fu">colnames</span>(X))])</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>t_hat[folds[[k]]] <span class="ot">=</span> <span class="fu">predict</span>(mod_t, <span class="at">newdata =</span> df_test[, <span class="fu">colnames</span>(X)])</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  mod_t <span class="ot">&lt;-</span> <span class="fu">ranger</span>(t <span class="sc">~</span> ., <span class="at">data =</span> df_train[, <span class="fu">c</span>(<span class="st">&quot;t&quot;</span>, <span class="fu">colnames</span>(X))])</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>t_hat[folds[[k]]] <span class="ot">=</span> <span class="fu">predict</span>(mod_t, <span class="at">data =</span> df_test[, <span class="fu">colnames</span>(X)])<span class="sc">$</span>predictions</span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="do">## Outcome model</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  mod_y <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(y <span class="sc">~</span> ., <span class="at">data =</span> df_train[, <span class="fu">c</span>(<span class="st">&quot;y&quot;</span>, <span class="fu">colnames</span>(X))])</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>y_hat[folds[[k]]] <span class="ot">=</span> <span class="fu">predict</span>(mod_y, <span class="at">newdata =</span> df_test[, <span class="fu">colnames</span>(X)])</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  mod_y <span class="ot">&lt;-</span> <span class="fu">ranger</span>(y <span class="sc">~</span> ., <span class="at">data =</span> df_train[, <span class="fu">c</span>(<span class="st">&quot;y&quot;</span>, <span class="fu">colnames</span>(X))])</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>y_hat[folds[[k]]] <span class="ot">=</span> <span class="fu">predict</span>(mod_y, <span class="at">data =</span> df_test[, <span class="fu">colnames</span>(X)])<span class="sc">$</span>predictions</span>
 <span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in randomForest.default(m, y, ...): The response has five or fewer
-unique values.  Are you sure you want to do regression?
-Warning in randomForest.default(m, y, ...): The response has five or fewer
-unique values.  Are you sure you want to do regression?
-Warning in randomForest.default(m, y, ...): The response has five or fewer
-unique values.  Are you sure you want to do regression?
-Warning in randomForest.default(m, y, ...): The response has five or fewer
-unique values.  Are you sure you want to do regression?
-Warning in randomForest.default(m, y, ...): The response has five or fewer
-unique values.  Are you sure you want to do regression?</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>t_res <span class="ot">=</span> df<span class="sc">$</span>t <span class="sc">-</span> df<span class="sc">$</span>t_hat</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>y_res <span class="ot">=</span> df<span class="sc">$</span>y <span class="sc">-</span> df<span class="sc">$</span>y_hat</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>t_res <span class="ot">=</span> df<span class="sc">$</span>t <span class="sc">-</span> df<span class="sc">$</span>t_hat</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>df<span class="sc">$</span>y_res <span class="ot">=</span> df<span class="sc">$</span>y <span class="sc">-</span> df<span class="sc">$</span>y_hat</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Final model</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>mod_final <span class="ot">=</span> <span class="fu">lm</span>(y_res <span class="sc">~</span> t_res <span class="sc">-</span> <span class="dv">1</span>, df)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tab_model</span>(mod_final)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Final model</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>mod_final <span class="ot">=</span> <span class="fu">lm</span>(y_res <span class="sc">~</span> t_res <span class="sc">-</span> <span class="dv">1</span>, df)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tab_model</span>(mod_final)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small">
 <tbody>
@@ -2335,7 +2324,7 @@ unique values.  Are you sure you want to do regression?</code></pre>
 <tr class="odd">
 <td style="text-align: left; padding: 0.2cm; vertical-align: top;">t res</td>
 <td style="text-align: left; padding: 0.2cm; vertical-align: top;">2.51</td>
-<td style="text-align: left; padding: 0.2cm; vertical-align: top;">2.45 – 2.56</td>
+<td style="text-align: left; padding: 0.2cm; vertical-align: top;">2.46 – 2.56</td>
 <td style="text-align: left; padding: 0.2cm; vertical-align: top;"><strong>&lt;0.001</strong></td>
 </tr>
 <tr class="even">
@@ -2344,7 +2333,7 @@ unique values.  Are you sure you want to do regression?</code></pre>
 </tr>
 <tr class="odd">
 <td style="text-align: left; padding: 0.2cm; vertical-align: top; padding-top: 0.1cm; padding-bottom: 0.1cm;">R<sup>2</sup> / R<sup>2</sup> adjusted</td>
-<td colspan="3" style="text-align: left; padding: 0.2cm; vertical-align: top; padding-top: 0.1cm; padding-bottom: 0.1cm;">0.462 / 0.462</td>
+<td colspan="3" style="text-align: left; padding: 0.2cm; vertical-align: top; padding-top: 0.1cm; padding-bottom: 0.1cm;">0.463 / 0.463</td>
 </tr>
 </tbody>
 </table>
