@@ -1,0 +1,77 @@
+---
+title: "Crossfit with random forest"
+format:
+  html:
+    toc: true
+    embed-resources: true
+editor: source
+---
+
+## Data
+
+
+```{r message=FALSE, warning=FALSE}
+library(randomForest)
+library(caret)
+library(sjPlot)
+```
+
+```{r}
+set.seed(42)
+N <- 10000
+p <- 10
+X <- matrix(rnorm(N * p), N, p)
+colnames(X) <- paste0("X", 1:p)
+
+# Confounders influence both the treatment (D) and the outcome (Y)
+g_X <- sin(X[, 1]) + exp(X[, 2])
+m_X <- X[, 1]^2 + X[, 3]
+
+# True treatment effect (CATE / ATE)
+t_y = 2.5
+t <- rbinom(N, 1, plogis(m_X))
+y <- t_y * t + g_X + rnorm(N)
+
+# Combine into a data frame
+df <- data.frame(y = y, t = t, X)
+```
+
+```{r}
+head(df)
+```
+
+## FWL method with cross-fitting
+
+```{r}
+k_folds <- 5  # Number of folds
+folds <- createFolds(df$y, k = k_folds)
+
+df$t_hat = df$y_hat = NA
+
+for (k in 1:k_folds) {
+  df_train = df[-folds[[k]], ]
+  df_test = df[folds[[k]], ]
+
+  ## Propensity model
+  mod_t <- randomForest(t ~ ., data = df_train[, c("t", colnames(X))])
+  df$t_hat[folds[[k]]] = predict(mod_t, newdata = df_test[, colnames(X)])
+
+  ## Outcome model
+  mod_y <- randomForest(y ~ ., data = df_train[, c("y", colnames(X))])
+  df$y_hat[folds[[k]]] = predict(mod_y, newdata = df_test[, colnames(X)])
+
+}
+
+df$t_res = df$t - df$t_hat
+df$y_res = df$y - df$y_hat
+
+```
+
+
+
+```{r}
+## Final model
+mod_final = lm(y_res ~ t_res - 1, df)
+tab_model(mod_final)
+```
+
