@@ -14,6 +14,7 @@ editor: source
 library(ranger)
 library(caret)
 library(sjPlot)
+library(pdp)
 ```
 
 ```{r}
@@ -38,6 +39,18 @@ df <- data.frame(y = y, t = t, X)
 
 ```{r}
 head(df)
+```
+
+```{r}
+ggplot(df, aes(x = X1, y = t)) + 
+  geom_point() + 
+  geom_smooth()
+```
+
+```{r}
+ggplot(df, aes(x = X1, y = y)) + 
+  geom_point() + 
+  geom_smooth()
 ```
 
 ## FWL method with cross-fitting
@@ -67,7 +80,27 @@ df$y_res = df$y - df$y_hat
 
 ```
 
+### Partial plot
 
+```{r}
+
+par_df = partial(mod_t, pred.var = "X1")
+ggplot(par_df, aes(x = X1, y = yhat)) +
+  geom_line() +
+  theme_bw()
+
+```
+
+```{r}
+
+par_df = partial(mod_y, pred.var = "X1")
+ggplot(par_df, aes(x = X1, y = yhat)) +
+  geom_line() +
+  theme_bw()
+
+```
+
+## Final model
 
 ```{r}
 ## Final model
