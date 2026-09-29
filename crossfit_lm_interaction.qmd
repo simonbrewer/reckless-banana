@@ -53,7 +53,7 @@ t1_t2 = 3.0
 
 y = x1 * x1_y + t1 * t1_y + t2 * t2_y + rnorm(n_samples, 0, 0.25)
 
-df = data.frame(x1, t1, t2, y)
+df = data.frame(x1, t1, t2, t1_t2 = t1 * t2, y)
 ```
 
 ### Plots
@@ -75,7 +75,7 @@ tab_model(mod_lm)
 ```{r}
 folds <- createFolds(df$y, k = k_folds)
 
-df$t1_hat = df$t2_hat = df$y_hat = NA
+df$t1_hat = df$t2_hat = df$t1_t2_hat = df$y_hat = NA
 
 for (k in 1:k_folds) {
   ## Split data
@@ -83,21 +83,26 @@ for (k in 1:k_folds) {
   df_test = df[folds[[k]], ]
 
   ## Propensity model 1
-  mod = lm(t1 ~ x1, df_train)
-  df$t1_hat[folds[[k]]] = predict(mod, newdata = df_test)
+  mod1 = lm(t1 ~ x1, df_train)
+  df$t1_hat[folds[[k]]] = predict(mod1, newdata = df_test)
   
-  ## Propensity model 1
-  mod = lm(t2 ~ x1, df_train)
-  df$t2_hat[folds[[k]]] = predict(mod, newdata = df_test)
+  ## Propensity model 2
+  mod2 = lm(t2 ~ x1, df_train)
+  df$t2_hat[folds[[k]]] = predict(mod2, newdata = df_test)
+  
+  ## Propensity model 3 (interaction)
+  mod3 = lm(t1_t2 ~ x1, df_train)
+  df$t1_t2_hat[folds[[k]]] = predict(mod3, newdata = df_test)
   
   ## Outcome model
-  mod = lm(y ~ x1, df_train)
-  df$y_hat[folds[[k]]] = predict(mod, newdata = df_test)
+  mod4 = lm(y ~ x1, df_train)
+  df$y_hat[folds[[k]]] = predict(mod4, newdata = df_test)
 
 }
 
 df$t1_res = df$t1 - df$t1_hat
 df$t2_res = df$t2 - df$t2_hat
+df$t1_t2_res = df$t1_t2 - df$t1_t2_hat
 df$y_res = df$y - df$y_hat
 ```
 
@@ -110,7 +115,7 @@ tab_model(mod_final)
 ```
 
 ```{r}
-mod_final = lm(y_res ~ t1_res * t2_res - 1, df) ## Remove intercept
+mod_final = lm(y_res ~ t1_res + t2_res + t1_t2_res - 1, df) ## Remove intercept
 tab_model(mod_final)
 ```
 
@@ -138,7 +143,7 @@ t1_t2 = 3.0
 
 y = x1 * x1_y + t1 * t1_y + t2 * t2_y + t1_t2 * (t1 * t2) + rnorm(n_samples, 0, 0.25)
 
-df = data.frame(x1, t1, t2, y)
+df = data.frame(x1, t1, t2, t1_t2 = t1 * t2, y)
 ```
 
 ### Plots
@@ -165,7 +170,7 @@ tab_model(mod_lm)
 ```{r}
 folds <- createFolds(df$y, k = k_folds)
 
-df$t1_hat = df$t2_hat = df$y_hat = NA
+df$t1_hat = df$t2_hat = df$t1_t2_hat = df$y_hat = NA
 
 for (k in 1:k_folds) {
   ## Split data
@@ -176,18 +181,23 @@ for (k in 1:k_folds) {
   mod1 = lm(t1 ~ x1, df_train)
   df$t1_hat[folds[[k]]] = predict(mod1, newdata = df_test)
   
-  ## Propensity model 1
+  ## Propensity model 2
   mod2 = lm(t2 ~ x1, df_train)
   df$t2_hat[folds[[k]]] = predict(mod2, newdata = df_test)
   
+  ## Propensity model 3 (interaction)
+  mod3 = lm(t1_t2 ~ x1, df_train)
+  df$t1_t2_hat[folds[[k]]] = predict(mod3, newdata = df_test)
+  
   ## Outcome model
-  mod = lm(y ~ x1, df_train)
-  df$y_hat[folds[[k]]] = predict(mod, newdata = df_test)
+  mod4 = lm(y ~ x1, df_train)
+  df$y_hat[folds[[k]]] = predict(mod4, newdata = df_test)
 
 }
 
 df$t1_res = df$t1 - df$t1_hat
 df$t2_res = df$t2 - df$t2_hat
+df$t1_t2_res = df$t1_t2 - df$t1_t2_hat
 df$y_res = df$y - df$y_hat
 ```
 
@@ -200,6 +210,6 @@ tab_model(mod_final)
 ```
 
 ```{r}
-mod_final = lm(y_res ~ t1_res * t2_res - 1, df) ## Remove intercept
+mod_final = lm(y_res ~ t1_res + t2_res + t1_t2_res - 1, df) ## Remove intercept
 tab_model(mod_final)
 ```
