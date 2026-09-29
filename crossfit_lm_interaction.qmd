@@ -23,6 +23,7 @@ Any parameters go here:
 - `n_samples`: number of samples
 
 ```{r}
+set.seed(42)
 k_folds = 5
 n_samples = 10000
 ```
@@ -101,10 +102,104 @@ df$y_res = df$y - df$y_hat
 ```
 
 
+## Final model
 
 ```{r}
-## Final model
 mod_final = lm(y_res ~ t1_res + t2_res - 1, df) ## Remove intercept
 tab_model(mod_final)
 ```
 
+```{r}
+mod_final = lm(y_res ~ t1_res * t2_res - 1, df) ## Remove intercept
+tab_model(mod_final)
+```
+
+# Two treatments (with interaction)
+
+## Data
+
+```{r}
+## Confounder
+x1 = rnorm(n_samples, mean = 0, sd = 1)
+
+## T1
+x1_t1 = 2
+t1 = x1 * x1_t1 + rnorm(n_samples, 0, 0.5)
+## T2
+x1_t2 = 5
+t2 = x1 * x1_t2 + rnorm(n_samples, 0, 0.5)
+```
+
+```{r}
+x1_y = 1.5
+t1_y = 2.5
+t2_y = 1.0
+t1_t2 = 3.0
+
+y = x1 * x1_y + t1 * t1_y + t2 * t2_y + t1_t2 * (t1 * t2) + rnorm(n_samples, 0, 0.25)
+
+df = data.frame(x1, t1, t2, y)
+```
+
+### Plots
+
+```{r}
+ggscatter(df, "x1", "y")
+```
+
+
+## Classic causal model
+
+```{r}
+mod_lm = lm(y ~ x1 + t1 + t2, df)
+tab_model(mod_lm)
+```
+
+```{r}
+mod_lm = lm(y ~ x1 + (t1 * t2), df)
+tab_model(mod_lm)
+```
+
+## FWL method with cross-fitting
+
+```{r}
+folds <- createFolds(df$y, k = k_folds)
+
+df$t1_hat = df$t2_hat = df$y_hat = NA
+
+for (k in 1:k_folds) {
+  ## Split data
+  df_train = df[-folds[[k]], ]
+  df_test = df[folds[[k]], ]
+
+  ## Propensity model 1
+  mod1 = lm(t1 ~ x1, df_train)
+  df$t1_hat[folds[[k]]] = predict(mod1, newdata = df_test)
+  
+  ## Propensity model 1
+  mod2 = lm(t2 ~ x1, df_train)
+  df$t2_hat[folds[[k]]] = predict(mod2, newdata = df_test)
+  
+  ## Outcome model
+  mod = lm(y ~ x1, df_train)
+  df$y_hat[folds[[k]]] = predict(mod, newdata = df_test)
+
+}
+
+df$t1_res = df$t1 - df$t1_hat
+df$t2_res = df$t2 - df$t2_hat
+df$y_res = df$y - df$y_hat
+```
+
+
+## Final model
+
+```{r}
+mod_final = lm(y_res ~ t1_res + t2_res - 1, df) ## Remove intercept
+tab_model(mod_final)
+```
+
+```{r}
+mod_final = lm(y_res ~ t1_res * t2_res - 1, df) ## Remove intercept
+tab_model(mod_final)
+```
