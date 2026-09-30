@@ -7,6 +7,10 @@ format:
 editor: source
 ---
 
+## Introduction
+
+Cross-fitting with non-linear confounding. Simulated code from Gemini
+
 ## Data
 
 
