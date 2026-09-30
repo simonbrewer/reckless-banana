@@ -1,0 +1,146 @@
+---
+title: "Crossfit with random forest"
+format:
+  html:
+    toc: true
+    embed-resources: true
+editor: source
+---
+
+## Data
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ranger)
+library(caret)
+library(sjPlot)
+```
+
+Simulation set up
+
+```{r}
+set.seed(42)
+n_samples = 10000
+n_folds = 5
+```
+
+Create confounders
+
+```{r}
+X1 = rnorm(n_samples, 0, 1)
+X2 = runif(n_samples, -2, 2)
+```
+
+Create treatments as non-linear functions of confounders
+
+```{r}
+t1  = 2.0 * X1 + 1.5 * sin(X2) + rnorm(n_samples, 0, 1)
+t2  = -1.2 * X2 + rnorm(n_samples, 0, 1)
+## remove comment to include correlation between treatments
+# t2  = -1.2 * X2 + 0.8 * t1 + rnorm(n_samples, 0, 1)
+```
+
+Create outcome as linear function of Xs and ts
+
+```{r}
+## Causal parameters
+beta_t1 = 2.5
+beta_t2 = -1.8
+beta_t1_t2 = 4.0
+
+y  = 10 + (2.0 * exp(X1)) + (4.5 * sin(X2)) + 
+  (beta_t1 * t1) + 
+  (beta_t2 * t2) + 
+  (beta_t1_t2 * (t1 * t2)) + 
+  rnorm(n_samples, 0, 1.2)
+```
+
+Combine into a data frame
+
+```{r}
+df = data.frame(y = y, t1 = t1, t2 = t2, t1_t2 = t1 * t2, X1, X2)
+```
+
+```{r}
+head(df)
+```
+
+### Plots
+
+```{r}
+ggplot(df, aes(x = X1, y = y)) +
+  geom_point()
+ggplot(df, aes(x = X2, y = y)) +
+  geom_point()
+ggplot(df, aes(x = t1, y = y)) +
+  geom_point()
+ggplot(df, aes(x = t2, y = y)) +
+  geom_point()
+ggplot(df, aes(x = t1_t2, y = y)) +
+  geom_point()
+
+```
+
+## FWL method with cross-fitting
+
+```{r}
+folds = createFolds(df$y, k = n_folds)
+
+df$t1_hat = df$t2_hat = df$t1_t2_hat = df$y_hat = NA
+
+for (k in 1:n_folds) {
+  df_train = df[-folds[[k]], ]
+  df_test = df[folds[[k]], ]
+
+  ## Propensity model (t1)
+  mod_t1 = ranger(t1 ~ X1 + X2, data = df_train)
+  df$t1_hat[folds[[k]]] = predict(mod_t1, data = df_test)$predictions
+
+  ## Propensity model (t2)
+  mod_t2 = ranger(t2 ~ X1 + X2, data = df_train)
+  df$t2_hat[folds[[k]]] = predict(mod_t2, data = df_test)$predictions
+
+  ## Propensity model (interaction)
+  mod_t1_t2 = ranger(t1_t2 ~ X1 + X2, data = df_train)
+  df$t1_t2_hat[folds[[k]]] = predict(mod_t1_t2, data = df_test)$predictions
+
+  ## Outcome model
+  mod_y = ranger(y ~ X1 + X2, data = df_train)
+  df$y_hat[folds[[k]]] = predict(mod_y, data = df_test)$predictions
+
+}
+
+df$t1_res = df$t1 - df$t1_hat
+df$t2_res = df$t2 - df$t2_hat
+df$t1_t2_res = df$t1_t2 - df$t1_t2_hat
+df$y_res = df$y - df$y_hat
+
+```
+
+
+## Final model
+
+No interaction
+
+```{r}
+mod_final = lm(y_res ~ t1_res + t2_res - 1, df) ## Remove intercept
+tab_model(mod_final)
+```
+
+Interaction
+
+```{r}
+mod_final = lm(y_res ~ t1_res + t2_res + t1_t2_res - 1, df) ## Remove intercept
+tab_model(mod_final)
+```
+
+Comparison
+
+```{r}
+comp_df = data.frame(true = c(beta_t1, beta_t2, beta_t1_t2),
+                     mod = coef(mod_final),
+                     se = summary(mod_final)$coefficients[, 2])
+
+knitr::kable(comp_df)
+```
