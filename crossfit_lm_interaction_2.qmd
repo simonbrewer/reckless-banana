@@ -23,7 +23,7 @@ Crossfitting example
 $$\mathbb{E}[Y\vert{}T,X] = \beta_1 T_1 + \beta_2 T_2 + \beta_{inter} (T_1 \times T_2) + g(X)$$ 
 ### Data set up
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 set.seed(42)
 library(tidyverse)
 library(sjPlot)
@@ -105,12 +105,15 @@ df$res_t1t2_1 <- df$t1t2 - hat_t1t2
 
 ### Final stage model
 
+- With orthogonalized interaction
+
 ```{r}
 final_model <- lm(res_y ~ 0 + res_t1 + res_t2 + res_t1t2_1, data = df)
 
 tab_model(final_model)
 ```
 
+- With manually calculated interaction
 
 ```{r}
 df$res_t1t2_2 <- (df$t1 * df$t2) - (hat_t1 * hat_t2)
@@ -119,6 +122,14 @@ final_model <- lm(res_y ~ 0 + res_t1 + res_t2 + res_t1t2_2, data = df)
 
 tab_model(final_model)
 
+```
+
+- Sanity check on the full model w/ confounders
+
+```{r}
+single_model <- lm(y ~ x1 + x2 + t1 + t2 + t1:t2)
+
+tab_model(single_model)
 ```
 
 ```{r}
