@@ -132,4 +132,10 @@ final_model <- lm(res_y ~ 0 + res_t1 + res_t2 + res_t3 +
 tab_model(final_model)
 ```
 
+Sanity check on the full model w/ confounders
 
+```{r}
+single_model <- lm(y ~ x1 + x2 + t1 + t2 + t3 + t1:t2 + t1:t3 + t2:t3)
+
+tab_model(single_model)
+```
