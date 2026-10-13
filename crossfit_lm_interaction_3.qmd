@@ -1,0 +1,135 @@
+---
+title: "Crossfitting example"
+format:
+  html:
+    toc: true
+    embed-resources: true
+editor: source
+---
+
+## Introduction
+
+Crossfitting example. This include three treatments and interactions. All effects can be set to zero (or some small quantity)
+
+- Treatments:
+  - Three linear treatments + interactions
+  - Continuous
+- Confounders:
+  - Two linear confounders
+  - Continuous
+
+$$\mathbb{E}[Y\vert{}T,X] = \beta_1 T_1 + \beta_2 T_2 + \beta_{int12} (T_1 \times T_2) + \beta_{int13} (T_1 \times T_3) + \beta_{int23} (T_2 \times T_3) + g(X)$$ 
+
+### Data set up
+
+```{r message=FALSE, warning=FALSE}
+set.seed(42)
+library(tidyverse)
+library(sjPlot)
+```
+
+```{r}
+n <- 10000
+
+## Confounders (X)
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+```
+
+```{r}
+## Continuous Treatments (correlated with confounders)
+t1 <- 0.5 * x1 + 0.3 * x2 + rnorm(n, sd = 0.5)
+t2 <- -0.4 * x1 + 0.6 * x2 + rnorm(n, sd = 0.5)
+t3 <- 0.2 * x1 - 0.2 * x2 + rnorm(n, sd = 0.5)
+```
+
+```{r}
+## Outcome
+beta_t1 <- 2.0
+beta_t2 <- 3.5
+beta_t3 <- -1.5
+beta_int12 <- 1.2
+beta_int13 <- 0
+beta_int23 <- 0
+
+y <- (beta_t1 * t1) + 
+  (beta_t2 * t2) + 
+  (beta_t3 * t3) + 
+  (beta_int12 * (t1 * t2)) + 
+  (beta_int13 * (t1 * t3)) + 
+  (beta_int23 * (t2 * t3)) + 
+  (1.5 * x1 + 2.0 * x2) + 
+  rnorm(n)
+
+# Combine into a data frame
+df <- data.frame(y = y, t1 = t1, t2 = t2, t3 = t3, 
+                 t1t2 = t1 * t2, t1t3 = t1 * t3, t2t3 = t2 * t3, 
+                 x1 = x1, x2 = x2)
+```
+
+
+### Cross-fitting 
+
+First run a cross-fitting loop where we orthogonalize the treatments and the interaction
+
+```{r}
+nfolds <- 5
+folds <- sample(rep(1:nfolds, length.out = n))
+
+## Store expected values
+hat_t1 <- rep(NA, n)
+hat_t2 <- rep(NA, n)
+hat_t3 <- rep(NA, n)
+hat_t1t2 <- rep(NA, n)
+hat_t1t3 <- rep(NA, n)
+hat_t2t3 <- rep(NA, n)
+hat_y  <- rep(NA, n)
+
+## Loop over the folds
+for (k in 1:nfolds) {
+  train_id <- which(folds != k)
+  eval_id  <- which(folds == k)
+  
+  train_data <- df[train_id, ]
+  eval_data  <- df[eval_id, ]
+  
+  ## Outcome model
+  model_y  <- lm(y ~ x1 + x2, data = train_data)
+  ## Propensity models
+  model_t1 <- lm(t1 ~ x1 + x2, data = train_data)
+  model_t2 <- lm(t2 ~ x1 + x2, data = train_data)
+  model_t3 <- lm(t3 ~ x1 + x2, data = train_data)
+  model_t1t2 <- lm(t1t2 ~ x1 + x2, data = train_data)
+  model_t1t3 <- lm(t1t3 ~ x1 + x2, data = train_data)
+  model_t2t3 <- lm(t2t3 ~ x1 + x2, data = train_data)
+
+  ## Get predicted values
+  hat_y[eval_id]  <- predict(model_y, newdata = eval_data)
+  hat_t1[eval_id] <- predict(model_t1, newdata = eval_data)
+  hat_t2[eval_id] <- predict(model_t2, newdata = eval_data)
+  hat_t3[eval_id] <- predict(model_t3, newdata = eval_data)
+  hat_t1t2[eval_id] <- predict(model_t1t2, newdata = eval_data)
+  hat_t1t3[eval_id] <- predict(model_t1t3, newdata = eval_data)
+  hat_t2t3[eval_id] <- predict(model_t2t3, newdata = eval_data)
+}
+
+## Calculate residuals
+df$res_y  <- df$y - hat_y
+df$res_t1 <- df$t1 - hat_t1
+df$res_t2 <- df$t2 - hat_t2
+df$res_t3 <- df$t3 - hat_t3
+df$res_t1t2 <- df$t1t2 - hat_t1t2
+df$res_t1t3 <- df$t1t3 - hat_t1t3
+df$res_t2t3 <- df$t2t3 - hat_t2t3
+```
+
+### Final stage model
+
+```{r}
+final_model <- lm(res_y ~ 0 + res_t1 + res_t2 + res_t3 + 
+                    res_t1t2 + res_t1t3 + res_t2t3, data = df)
+
+tab_model(final_model)
+```
+
+
